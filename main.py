@@ -179,3 +179,86 @@ def list_consultas():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
+# ================================
+# ROTAS DE PACIENTES - UPDATE e DELETE
+# ================================
+
+@app.route("/api/pacientes/<int:paciente_id>", methods=["PUT"])
+def atualizar_paciente(paciente_id):
+    """Atualiza um paciente pelo ID"""
+    data = request.json
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("""
+                    UPDATE pacientes
+                    SET nome = :nome,
+                        email = :email
+                    WHERE id = :id
+                """),
+                {
+                    "nome": data.get("nome"),
+                    "email": data.get("email"),
+                    "id": paciente_id
+                }
+            )
+        return jsonify({"message": "Paciente atualizado com sucesso!", "status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/pacientes/<int:paciente_id>", methods=["DELETE"])
+def deletar_paciente(paciente_id):
+    """Remove um paciente pelo ID"""
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("DELETE FROM pacientes WHERE id = :id"),
+                {"id": paciente_id}
+            )
+        return jsonify({"message": "Paciente excluído com sucesso!", "status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ================================
+# ROTAS DE PROFISSIONAIS - UPDATE e DELETE
+# ================================
+
+@app.route("/api/profissionais/<int:profissional_id>", methods=["PUT"])
+def atualizar_profissional(profissional_id):
+    """Atualiza um profissional pelo ID"""
+    data = request.json
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("""
+                    UPDATE profissionais
+                    SET nome = :nome,
+                        especialidade = :especialidade
+                    WHERE id = :id
+                """),
+                {
+                    "nome": data.get("nome"),
+                    "especialidade": data.get("especialidade"),
+                    "id": profissional_id
+                }
+            )
+        return jsonify({"message": "Profissional atualizado com sucesso!", "status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/profissionais/<int:profissional_id>", methods=["DELETE"])
+def deletar_profissional(profissional_id):
+    """Remove um profissional pelo ID"""
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("DELETE FROM profissionais WHERE id = :id"),
+                {"id": profissional_id}
+            )
+        return jsonify({"message": "Profissional excluído com sucesso!", "status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
