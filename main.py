@@ -153,20 +153,57 @@ def listar_consultas():
 
 
 @app.route("/api/consultas", methods=["POST"])
-def criar_consulta():
-    data = request.json
-    with engine.begin() as conn:
+def create_consulta():
+    """Cria uma nova consulta"""
+    data = request.get_json()
+
+    paciente_id = data.get("paciente_id")
+    profissional_id = data.get("profissional_id")
+    consulta_data = data.get("data")
+    status = data.get("status")
+
+    # 🔹 Validações básicas
+    if not paciente_id or not profissional_id or not consulta_data or not status:
+        return jsonify({"error": "Campos obrigatórios: paciente_id, profissional_id, data, status"}), 400
+
+    # 🔹 Verifica se paciente existe
+    with engine.connect() as conn:
+        paciente = conn.execute(
+            text("SELECT id FROM pacientes WHERE id = :id"), {"id": paciente_id}
+        ).fetchone()
+        if not paciente:
+            return jsonify({"error": f"Paciente com id={paciente_id} não encontrado"}), 404
+
+        # 🔹 Verifica se profissional existe
+        profissional = conn.execute(
+            text("SELECT id FROM profissionais WHERE id = :id"), {"id": profissional_id}
+        ).fetchone()
+        if not profissional:
+            return jsonify({"error": f"Profissional com id={profissional_id} não encontrado"}), 404
+
+        # 🔹 Verifica formato da data
+        from datetime import datetime
+        try:
+            dt = datetime.fromisoformat(consulta_data)
+        except ValueError:
+            return jsonify({"error": "Formato de data inválido. Use YYYY-MM-DDTHH:MM:SS"}), 400
+
+        # 🔹 Insere a consulta
         conn.execute(
-            text("""INSERT INTO consultas (paciente_id, profissional_id, data, status)
-                    VALUES (:paciente_id, :profissional_id, :data, :status)"""),
+            text("""
+                INSERT INTO consultas (paciente_id, profissional_id, data, status)
+                VALUES (:paciente_id, :profissional_id, :data, :status)
+            """),
             {
-                "paciente_id": data["paciente_id"],
-                "profissional_id": data["profissional_id"],
-                "data": data["data"],
-                "status": data.get("status", "agendada")
-            }
+                "paciente_id": paciente_id,
+                "profissional_id": profissional_id,
+                "data": dt,
+                "status": status,
+            },
         )
-    return jsonify({"message": "Consulta criada com sucesso"}), 201
+
+    return jsonify({"message": "Consulta criada com sucesso!", "status": "ok"}), 201
+
 
 
 @app.route("/api/consultas/<int:id>", methods=["DELETE"])
