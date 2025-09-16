@@ -23,52 +23,44 @@ def health():
     return jsonify({"message": "OSZO backend rodando no Render 🚀", "status": "ok"})
 
 
-@app.route("/api/admin/db/init")
-def init_db():
-    """Cria as tabelas iniciais do MVP"""
+@app.route("/api/admin/db/seed")
+def seed_db():
+    """Popula o banco com dados de exemplo"""
     token = request.args.get("token")
     if token != ADMIN_INIT_TOKEN:
         return jsonify({"error": "Token inválido"}), 403
 
     try:
         with engine.begin() as conn:
-            # Pacientes
+            # Inserir pacientes
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS pacientes (
-                    id SERIAL PRIMARY KEY,
-                    nome TEXT NOT NULL,
-                    email TEXT UNIQUE,
-                    criado_em TIMESTAMP DEFAULT NOW()
-                )
+                INSERT INTO pacientes (nome, email) VALUES
+                ('Maria da Silva', 'maria@email.com'),
+                ('João Pereira', 'joao@email.com'),
+                ('Ana Souza', 'ana@email.com')
+                ON CONFLICT (email) DO NOTHING
             """))
 
-            # Profissionais
+            # Inserir profissionais
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS profissionais (
-                    id SERIAL PRIMARY KEY,
-                    nome TEXT NOT NULL,
-                    especialidade TEXT,
-                    criado_em TIMESTAMP DEFAULT NOW()
-                )
+                INSERT INTO profissionais (nome, especialidade) VALUES
+                ('Dr. Carlos Mendes', 'Cardiologista'),
+                ('Dra. Fernanda Lima', 'Pediatra'),
+                ('Dr. Pedro Alves', 'Ortopedista')
             """))
 
-            # Consultas
+            # Inserir consultas (relacionando pacientes e profissionais)
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS consultas (
-                    id SERIAL PRIMARY KEY,
-                    paciente_id INTEGER REFERENCES pacientes(id),
-                    profissional_id INTEGER REFERENCES profissionais(id),
-                    data TIMESTAMP,
-                    status TEXT,
-                    criado_em TIMESTAMP DEFAULT NOW()
-                )
+                INSERT INTO consultas (paciente_id, profissional_id, data, status) VALUES
+                (1, 1, NOW() + interval '1 day', 'agendada'),
+                (2, 2, NOW() + interval '2 day', 'concluída'),
+                (3, 3, NOW() + interval '3 day', 'cancelada')
             """))
 
-        return jsonify({"message": "Tabelas criadas com sucesso!", "status": "ok"})
+        return jsonify({"message": "Banco populado com dados de exemplo!", "status": "ok"})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # ================================
 # CRUD PACIENTES
