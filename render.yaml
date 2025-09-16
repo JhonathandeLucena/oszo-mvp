@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: oszo-backend
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn main:app"
+    pythonVersion: 3.11.9
+
