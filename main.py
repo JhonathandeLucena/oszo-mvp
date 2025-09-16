@@ -8,7 +8,10 @@ app = Flask(__name__)
 CORS(app)
 
 # Configurações de ambiente
-DATABASE_URL = os.getenv("DATABASE_URL")  # vem do Render
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
 ADMIN_INIT_TOKEN = os.getenv("ADMIN_INIT_TOKEN", "oszo-12345")
 
 # Conexão com o banco de dados
