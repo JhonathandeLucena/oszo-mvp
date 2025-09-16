@@ -4,21 +4,20 @@ from flask_cors import CORS
 from sqlalchemy import create_engine, text
 
 # ================================
-# Inicialização do app
+# Inicialização
 # ================================
 app = Flask(__name__)
 CORS(app)
 
 # Configurações de ambiente
-DATABASE_URL = os.getenv("DATABASE_URL")  # Definido no Render
+DATABASE_URL = os.getenv("DATABASE_URL")
 ADMIN_INIT_TOKEN = os.getenv("ADMIN_INIT_TOKEN", "oszo-12345")
 
 # Conexão com o banco de dados
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
-
 # ================================
-# ROTAS DE SAÚDE E ADMIN
+# ROTAS BÁSICAS
 # ================================
 @app.route("/health")
 def health():
@@ -35,7 +34,6 @@ def init_db():
 
     try:
         with engine.begin() as conn:
-            # Pacientes
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS pacientes (
                     id SERIAL PRIMARY KEY,
@@ -45,7 +43,6 @@ def init_db():
                 )
             """))
 
-            # Profissionais
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS profissionais (
                     id SERIAL PRIMARY KEY,
@@ -55,7 +52,6 @@ def init_db():
                 )
             """))
 
-            # Consultas
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS consultas (
                     id SERIAL PRIMARY KEY,
@@ -74,79 +70,100 @@ def init_db():
 
 
 # ================================
-# CRUD - PACIENTES
+# PACIENTES
 # ================================
 @app.route("/api/pacientes", methods=["GET"])
-def listar_pacientes():
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT * FROM pacientes")).mappings().all()
-        return jsonify(list(result))
+def get_pacientes():
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT id, nome, email, criado_em FROM pacientes ORDER BY id"))
+            pacientes = [dict(row._mapping) for row in result]
+        return jsonify(pacientes)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/pacientes", methods=["POST"])
-def criar_paciente():
+def create_paciente():
     data = request.json
-    with engine.begin() as conn:
-        conn.execute(
-            text("INSERT INTO pacientes (nome, email) VALUES (:nome, :email)"),
-            {"nome": data["nome"], "email": data.get("email")},
-        )
-    return jsonify({"message": "Paciente criado com sucesso!"}), 201
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("INSERT INTO pacientes (nome, email) VALUES (:nome, :email)"),
+                {"nome": data["nome"], "email": data.get("email")}
+            )
+        return jsonify({"message": "Paciente criado com sucesso!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ================================
-# CRUD - PROFISSIONAIS
+# PROFISSIONAIS
 # ================================
 @app.route("/api/profissionais", methods=["GET"])
-def listar_profissionais():
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT * FROM profissionais")).mappings().all()
-        return jsonify(list(result))
+def get_profissionais():
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT id, nome, especialidade, criado_em FROM profissionais ORDER BY id"))
+            profissionais = [dict(row._mapping) for row in result]
+        return jsonify(profissionais)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/profissionais", methods=["POST"])
-def criar_profissional():
+def create_profissional():
     data = request.json
-    with engine.begin() as conn:
-        conn.execute(
-            text("INSERT INTO profissionais (nome, especialidade) VALUES (:nome, :especialidade)"),
-            {"nome": data["nome"], "especialidade": data.get("especialidade")},
-        )
-    return jsonify({"message": "Profissional criado com sucesso!"}), 201
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("INSERT INTO profissionais (nome, especialidade) VALUES (:nome, :especialidade)"),
+                {"nome": data["nome"], "especialidade": data.get("especialidade")}
+            )
+        return jsonify({"message": "Profissional criado com sucesso!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ================================
-# CRUD - CONSULTAS
+# CONSULTAS
 # ================================
 @app.route("/api/consultas", methods=["GET"])
-def listar_consultas():
-    with engine.connect() as conn:
-        result = conn.execute(text("""
-            SELECT c.id, p.nome AS paciente, pr.nome AS profissional, c.data, c.status
-            FROM consultas c
-            JOIN pacientes p ON c.paciente_id = p.id
-            JOIN profissionais pr ON c.profissional_id = pr.id
-        """)).mappings().all()
-        return jsonify(list(result))
+def get_consultas():
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT c.id, c.data, c.status,
+                       p.nome AS paciente_nome,
+                       pr.nome AS profissional_nome
+                FROM consultas c
+                LEFT JOIN pacientes p ON c.paciente_id = p.id
+                LEFT JOIN profissionais pr ON c.profissional_id = pr.id
+                ORDER BY c.id
+            """))
+            consultas = [dict(row._mapping) for row in result]
+        return jsonify(consultas)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/consultas", methods=["POST"])
-def criar_consulta():
+def create_consulta():
     data = request.json
-    with engine.begin() as conn:
-        conn.execute(
-            text("""
-                INSERT INTO consultas (paciente_id, profissional_id, data, status)
-                VALUES (:paciente_id, :profissional_id, :data, :status)
-            """),
-            {
-                "paciente_id": data["paciente_id"],
-                "profissional_id": data["profissional_id"],
-                "data": data.get("data"),
-                "status": data.get("status", "agendada"),
-            },
-        )
-    return jsonify({"message": "Consulta criada com sucesso!"}), 201
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("INSERT INTO consultas (paciente_id, profissional_id, data, status) VALUES (:paciente_id, :profissional_id, :data, :status)"),
+                {
+                    "paciente_id": data["paciente_id"],
+                    "profissional_id": data["profissional_id"],
+                    "data": data.get("data"),
+                    "status": data.get("status", "agendada")
+                }
+            )
+        return jsonify({"message": "Consulta criada com sucesso!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ================================
@@ -155,3 +172,4 @@ def criar_consulta():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
