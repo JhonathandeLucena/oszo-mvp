@@ -74,7 +74,45 @@ def init_db():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/admin/db/update_constraints")
+def update_constraints():
+    """Atualiza constraints para ON DELETE CASCADE"""
+    token = request.args.get("token")
+    if token != ADMIN_INIT_TOKEN:
+        return jsonify({"error": "Token inválido"}), 403
 
+    try:
+        with engine.begin() as conn:
+            # Remove constraint antiga de paciente_id
+            conn.execute(text("""
+                ALTER TABLE consultas
+                DROP CONSTRAINT IF EXISTS consultas_paciente_id_fkey
+            """))
+
+            # Cria constraint nova com ON DELETE CASCADE
+            conn.execute(text("""
+                ALTER TABLE consultas
+                ADD CONSTRAINT consultas_paciente_id_fkey
+                FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+            """))
+
+            # Remove constraint antiga de profissional_id
+            conn.execute(text("""
+                ALTER TABLE consultas
+                DROP CONSTRAINT IF EXISTS consultas_profissional_id_fkey
+            """))
+
+            # Cria constraint nova com ON DELETE CASCADE
+            conn.execute(text("""
+                ALTER TABLE consultas
+                ADD CONSTRAINT consultas_profissional_id_fkey
+                FOREIGN KEY (profissional_id) REFERENCES profissionais(id) ON DELETE CASCADE
+            """))
+
+        return jsonify({"message": "Constraints atualizadas com sucesso!", "status": "ok"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # ================================
 # ENDPOINTS PACIENTES
 # ================================
