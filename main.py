@@ -416,7 +416,8 @@ def docs():
     return jsonify(spec), 200
 
 # =========================================
-# Execução
+# Execução# Execução
+
 # =========================================
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
