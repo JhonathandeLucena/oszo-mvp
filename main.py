@@ -11,6 +11,7 @@ from datetime import datetime
 # =========================================
 app = Flask(__name__)
 
+# Variável de ambiente DATABASE_URL deve estar configurada no Render
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/oszo_db")
 API_TOKEN = os.getenv("API_TOKEN", "oszo-12345")
 
@@ -19,12 +20,14 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# CORS
+# CORS: permitir domínio do frontend (Render), Lovable e localhost
 CORS(app, resources={r"/*": {"origins": [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://oszo-care-connect.lovable.app"
+    "https://oszo-care-connect.lovable.app",
+    "https://oszo-frontend.onrender.com"   # ✅ Novo domínio adicionado
 ]}})
+
 
 # =========================================
 # Modelos
